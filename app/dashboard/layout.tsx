@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import Link from "next/link";
+import { NavItem } from "./NavItem"; // <--- Import Komponen Baru Kita
 import {
   LayoutDashboard,
   Package,
@@ -33,7 +33,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-[#05050a] text-white selection:bg-cyan-500/30">
-      {/* === SIDEBAR KIRI (Tetap) === */}
+      {/* === SIDEBAR KIRI === */}
       <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-white/10 bg-[#0a0a0f]/80 backdrop-blur-xl">
         <div className="flex h-full flex-col px-6 py-8">
           {/* Info User */}
@@ -115,35 +115,12 @@ export default async function DashboardLayout({
         </div>
       </aside>
 
-      {/* === PEMBUNGKUS KONTEN === */}
-      {/* Bagian ini yang membuat background halaman upload jadi gelap */}
+      {/* === KONTEN KANAN === */}
       <main className="ml-64 min-h-screen w-full p-8 bg-gradient-to-b from-[#0a0a0f] to-black">
         <div className="mx-auto max-w-5xl animate-in fade-in slide-in-from-bottom-4 duration-500">
           {children}
         </div>
       </main>
     </div>
-  );
-}
-
-function NavItem({
-  href,
-  icon,
-  label,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-gray-400 transition-all hover:bg-white/5 hover:text-white hover:pl-5"
-    >
-      <span className="group-hover:text-cyan-400 transition-colors">
-        {icon}
-      </span>
-      {label}
-    </Link>
   );
 }

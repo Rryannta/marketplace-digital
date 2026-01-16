@@ -1,7 +1,8 @@
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
-import Image from "next/image"; // <--- Import wajib komponen Image
-import { Plus, Package, Edit, Trash2 } from "lucide-react";
+import Image from "next/image";
+import { Plus, Package, Edit } from "lucide-react";
+import DeleteButton from "@/components/DeleteButton";
 
 export default async function MyProductsPage() {
   const supabase = await createClient();
@@ -51,16 +52,9 @@ export default async function MyProductsPage() {
               key={product.id}
               className="group relative overflow-hidden rounded-2xl bg-[#12121a] border border-white/5 transition-all hover:-translate-y-1 hover:border-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-500/10"
             >
-              {/* GAMBAR COVER (OPTIMIZED) */}
-              <Link
-                href={`/products/${product.id}`}
-                className="block relative aspect-[4/3] w-full overflow-hidden bg-gray-800 cursor-pointer"
-              >
-                {/* LOGIKA NEXT/IMAGE:
-                   - fill: Mengisi penuh kotak parent (aspect-[4/3])
-                   - sizes: Memberi tahu browser ukuran gambar yang pas untuk didownload
-                   - priority: false (default), agar lazy loading
-                */}
+              {/* === CONTAINER GAMBAR (Relative) === */}
+              <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-800">
+                {/* 1. GAMBAR PRODUK */}
                 <Image
                   src={product.image_url || "/placeholder.png"}
                   alt={product.title}
@@ -69,33 +63,50 @@ export default async function MyProductsPage() {
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
 
-                {/* Badge Kategori */}
-                <div className="absolute top-3 left-3 z-10 rounded-full bg-black/60 backdrop-blur-md px-3 py-1 text-[10px] font-bold text-white border border-white/10">
+                {/* 2. LINK DETAIL (Lapis Transparan Menutupi Gambar - z-10) */}
+                <Link
+                  href={`/products/${product.id}`}
+                  className="absolute inset-0 z-10"
+                  aria-label={`Lihat detail ${product.title}`}
+                />
+
+                {/* 3. BADGE KATEGORI (Hiasan) */}
+                <div className="absolute top-3 left-3 z-10 pointer-events-none rounded-full bg-black/60 backdrop-blur-md px-3 py-1 text-[10px] font-bold text-white border border-white/10">
                   {product.category}
                 </div>
 
-                {/* Overlay Action */}
-                <div className="absolute inset-0 z-20 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                  <button className="p-2 rounded-full bg-white/10 hover:bg-white text-white hover:text-black transition">
+                {/* 4. OVERLAY AKSI (Lapis Paling Atas - z-20) */}
+                {/* pointer-events-none di parent agar klik di area hitam TEMBUS ke Link Detail di bawahnya */}
+                <div className="absolute inset-0 z-20 flex items-center justify-center gap-3 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none">
+                  {/* Tombol Edit (Aktifkan pointer-events-auto agar bisa diklik) */}
+                  <Link
+                    href={`/dashboard/products/edit/${product.id}`}
+                    className="pointer-events-auto p-2 rounded-full bg-white/10 hover:bg-white text-white hover:text-black transition transform hover:scale-110"
+                    title="Edit Produk"
+                  >
                     <Edit size={18} />
-                  </button>
-                  <button className="p-2 rounded-full bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white transition">
-                    <Trash2 size={18} />
-                  </button>
+                  </Link>
+
+                  {/* Tombol Hapus (Aktifkan pointer-events-auto) */}
+                  <div className="pointer-events-auto transform hover:scale-110 transition">
+                    <DeleteButton id={product.id} />
+                  </div>
                 </div>
-              </Link>
+              </div>
 
               {/* INFO PRODUK */}
               <div className="p-5">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="line-clamp-1 text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">
-                    {product.title}
-                  </h3>
-                </div>
+                <Link href={`/products/${product.id}`} className="block">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="line-clamp-1 text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">
+                      {product.title}
+                    </h3>
+                  </div>
 
-                <p className="mt-2 line-clamp-2 text-xs text-gray-400">
-                  {product.description}
-                </p>
+                  <p className="mt-2 line-clamp-2 text-xs text-gray-400">
+                    {product.description}
+                  </p>
+                </Link>
 
                 <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-4">
                   <span className="text-lg font-bold text-white">
