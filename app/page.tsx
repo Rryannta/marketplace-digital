@@ -1,7 +1,8 @@
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
-import Image from "next/image";
-import SearchInput from "@/components/SeachInput";
+import SearchInput from "@/components/SearchInput";
+import ProductCard from "@/components/ProductCard"; // <--- Import Component Kartu
+import LoadMore from "@/components/LoadMore"; // <--- Import Infinite Scroll
 import {
   ShoppingBag,
   Cpu,
@@ -16,7 +17,7 @@ import {
   Flame,
   Sparkles,
   Tag,
-} from "lucide-react"; // Note: LayoutGrid dihapus karena tidak dipakai lagi
+} from "lucide-react";
 
 // MENU UTAMA (Discover)
 const DISCOVER_MENU = [
@@ -36,9 +37,7 @@ const DISCOVER_MENU = [
   },
 ];
 
-// MENU KATEGORI (Browse) - "Semua Produk" SUDAH DIHAPUS
 const CATEGORIES = [
-  // { name: "Semua Produk"... } <-- HAPUS
   { name: "Template Web", icon: Cpu, key: "Template Web" },
   { name: "Desain & UI", icon: Palette, key: "Desain & UI" },
   { name: "Game Assets", icon: Gamepad2, key: "Game Assets" },
@@ -63,38 +62,33 @@ export default async function Homepage({ searchParams }: HomepageProps) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // --- QUERY AWAL (Hanya 8 item pertama) ---
   let query = supabase.from("products").select(`
       *,
       profiles ( full_name, avatar_url )
     `);
 
   if (querySearch) {
-    query = query.ilike("title", `%${querySearch}%`);
+    // Cari di title ATAU description
+    // Syntax Supabase: col1.ilike.val,col2.ilike.val
+    query = query.or(
+      `title.ilike.%${querySearch}%,description.ilike.%${querySearch}%`
+    );
   }
 
-  if (queryCategory && queryCategory !== "all") {
+  if (queryCategory && queryCategory !== "all")
     query = query.eq("category", queryCategory);
-  }
+  if (queryFilter === "sale") query = query.lt("price", 50000);
 
-  if (queryFilter === "sale") {
-    query = query.lt("price", 50000);
-  }
-
-  query = query.order("created_at", { ascending: false });
+  // Batasi hanya 8 produk awal (Range 0-7)
+  query = query.order("created_at", { ascending: false }).range(0, 7);
 
   const { data: products } = await query;
-
-  const formatRupiah = (number: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(number);
-  };
+  // ----------------------------------------
 
   return (
     <div className="min-h-screen bg-[#05050a] text-white">
-      {/* === NAVBAR ATAS === */}
+      {/* NAVBAR */}
       <nav className="sticky top-0 z-50 border-b border-white/5 bg-[#05050a]/80 backdrop-blur-xl px-6 py-4">
         <div className="flex w-full items-center justify-between gap-8">
           <Link
@@ -131,11 +125,10 @@ export default async function Homepage({ searchParams }: HomepageProps) {
         </div>
       </nav>
 
-      {/* === LAYOUT UTAMA === */}
+      {/* LAYOUT UTAMA */}
       <div className="flex w-full pt-6">
-        {/* SIDEBAR KIRI */}
+        {/* SIDEBAR */}
         <aside className="hidden w-64 flex-col gap-8 px-6 md:flex sticky top-24 h-[calc(100vh-100px)] overflow-y-auto scrollbar-hide border-r border-white/5">
-          {/* GROUP 1: DISCOVER */}
           <div className="space-y-1">
             <p className="px-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
               Discover
@@ -144,7 +137,6 @@ export default async function Homepage({ searchParams }: HomepageProps) {
               const isActive = item.activeKey
                 ? queryFilter === item.activeKey
                 : !queryFilter && !queryCategory;
-
               return (
                 <Link
                   href={item.href}
@@ -161,8 +153,8 @@ export default async function Homepage({ searchParams }: HomepageProps) {
                       item.name === "Sedang Tren"
                         ? "text-orange-500"
                         : item.name === "Diskon / Promo"
-                        ? "text-red-400"
-                        : ""
+                          ? "text-red-400"
+                          : ""
                     }
                   />
                   {item.name}
@@ -171,14 +163,12 @@ export default async function Homepage({ searchParams }: HomepageProps) {
             })}
           </div>
 
-          {/* GROUP 2: CATEGORIES */}
           <div className="space-y-1">
             <p className="px-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
               Categories
             </p>
             {CATEGORIES.map((cat) => {
               const isActive = queryCategory === cat.key;
-
               return (
                 <Link
                   href={`/?category=${cat.key}`}
@@ -224,50 +214,18 @@ export default async function Homepage({ searchParams }: HomepageProps) {
 
           {products && products.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+              {/* 1. RENDER 8 PRODUK PERTAMA (SERVER SIDE) */}
               {products.map((product) => (
-                <Link
-                  href={`/products/${product.id}`}
-                  key={product.id}
-                  className="group relative block overflow-hidden rounded-2xl bg-[#12121a] border border-white/5 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-500/10"
-                >
-                  <div className="aspect-[4/3] w-full overflow-hidden bg-gray-800 relative">
-                    <Image
-                      src={product.image_url || "/placeholder.png"}
-                      alt={product.title}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    <div className="absolute top-3 right-3 rounded-lg bg-black/70 backdrop-blur px-2 py-1 text-xs font-bold text-white border border-white/10">
-                      {product.price === 0
-                        ? "FREE"
-                        : formatRupiah(product.price)}
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="line-clamp-1 text-base font-bold text-white group-hover:text-cyan-400 transition-colors">
-                      {product.title}
-                    </h3>
-                    <div className="mt-2 flex items-center gap-2">
-                      <div className="h-5 w-5 overflow-hidden rounded-full border border-white/10">
-                        <Image
-                          src={
-                            product.profiles?.avatar_url ||
-                            `https://ui-avatars.com/api/?name=${
-                              product.profiles?.full_name || "User"
-                            }`
-                          }
-                          alt="Avatar"
-                          width={20}
-                          height={20}
-                        />
-                      </div>
-                      <p className="text-xs text-gray-400 truncate">
-                        {product.profiles?.full_name || "Unknown Creator"}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
+                <ProductCard key={product.id} product={product} />
               ))}
+
+              {/* 2. INFINITE SCROLL COMPONENT (CLIENT SIDE) */}
+              <LoadMore
+                search={querySearch}
+                category={queryCategory}
+                filter={queryFilter}
+                initialOffset={2} // Mulai load dari halaman 2 (karena hal 1 udah diambil di atas)
+              />
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed border-white/10 rounded-3xl bg-white/5">
