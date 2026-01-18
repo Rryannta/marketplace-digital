@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { redirect } from "next/navigation";
+import GoogleLoginButton from "@/components/GoogleLoginButton";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -18,7 +20,6 @@ export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  // --- LOGIC HANDLERS (SAMA) ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -61,14 +62,13 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
     if (error) alert(error.message);
   };
 
   return (
-    // Menggunakan 100dvh agar pas di layar browser HP
     <div className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[#0a0a0a] p-4 text-white selection:bg-purple-500/30">
       {/* --- ANIMATED AURORA BACKGROUND --- */}
       <div className="absolute inset-0 w-full h-full">
@@ -84,7 +84,7 @@ export default function LoginPage() {
         <motion.div
           animate={{
             scale: [1, 1.3, 1],
-            x: [-50, 50, -50], // Gerakan dikurangi sedikit agar tidak keluar layar HP
+            x: [-50, 50, -50],
             opacity: [0.2, 0.4, 0.2],
           }}
           transition={{
@@ -102,11 +102,9 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        // Padding responsif: p-6 di HP, p-8 di Desktop
         className="relative z-10 w-full max-w-[420px] rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8 backdrop-blur-2xl shadow-[0_0_40px_-10px_rgba(120,119,198,0.3)]"
       >
         <div className="mb-8 text-center">
-          {/* Ukuran font responsif */}
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent">
             Welcome Back
           </h1>
@@ -267,4 +265,13 @@ export default function LoginPage() {
       </motion.div>
     </div>
   );
+}
+
+export async function signOut() {
+  const supabase = await createClient();
+
+  await supabase.auth.signOut();
+
+  // Setelah logout, lempar balik ke halaman login
+  redirect("/login");
 }

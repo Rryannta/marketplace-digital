@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import SignOutButton from "@/components/SignOutButton";
 import { NavItem } from "./NavItem"; // <--- Import Komponen Baru Kita
 import {
   LayoutDashboard,
@@ -102,15 +103,7 @@ export default async function DashboardLayout({
           </nav>
 
           <div className="mt-auto pt-6 border-t border-white/10">
-            <form action="/auth/signout" method="post">
-              <button
-                type="submit"
-                className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-red-400 transition-all hover:bg-red-500/10 hover:text-red-300"
-              >
-                <LogOut size={20} />
-                Keluar
-              </button>
-            </form>
+            <SignOutButton />
           </div>
         </div>
       </aside>

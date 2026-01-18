@@ -209,20 +209,21 @@ export async function updateProduct(formData: FormData) {
     return { error: error.message };
   }
 
-  // 3. REVALIDATE & REDIRECT (DI LUAR TRY CATCH)
-  // Kode di sini hanya jalan jika TIDAK ada error di atas
+  // 3. REVALIDATE (TAPI JANGAN REDIRECT DI SINI)
   revalidatePath("/dashboard/products");
   revalidatePath(`/products/${productId}`);
   revalidatePath("/");
 
-  redirect("/dashboard/products");
+  // redirect("/dashboard/products"); <--- SUDAH DIHAPUS
+
+  return { success: true }; // <--- GANTINYA INI
 }
 
 export async function fetchProducts(
   page: number,
   searchQuery: string,
   category: string,
-  filter: string
+  filter: string,
 ) {
   const supabase = await createClient();
 
@@ -240,14 +241,14 @@ export async function fetchProducts(
       `
       *,
       profiles ( full_name, avatar_url )
-    `
+    `,
     )
     .range(from, to); // <--- KUNCI PAGINATION ADA DI SINI
 
   // Terapkan Filter yang sama seperti di Homepage
   if (searchQuery) {
     query = query.or(
-      `title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`
+      `title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`,
     );
   }
   if (category && category !== "all") {
@@ -377,4 +378,110 @@ export async function updateProfile(formData: FormData) {
   revalidatePath("/"); // Biar nama di navbar/produk berubah
 
   return { success: true };
+}
+
+export async function createProduct(formData: FormData) {
+  const supabase = await createClient();
+
+  // 1. Cek User Login
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Anda harus login untuk mengupload produk." };
+
+  // 2. Ambil Data dari Form
+  const title = formData.get("title") as string;
+  const description = formData.get("description") as string;
+  const category = formData.get("category") as string;
+  const price = Number(formData.get("price"));
+  const imageFile = formData.get("image") as File; // Wajib
+  const productFile = formData.get("file") as File; // Wajib
+
+  // 3. Validasi Dasar
+  if (!imageFile || imageFile.size === 0)
+    return { error: "Cover image wajib diisi." };
+  if (!productFile || productFile.size === 0)
+    return { error: "File produk wajib diisi." };
+
+  // 4. Upload Gambar Cover (Bucket Public)
+  const imageName = `${Date.now()}-${imageFile.name}`;
+  const { error: imageError } = await supabase.storage
+    .from("product-images")
+    .upload(imageName, imageFile);
+
+  if (imageError)
+    return { error: `Gagal upload gambar: ${imageError.message}` };
+
+  const { data: imageData } = supabase.storage
+    .from("product-images")
+    .getPublicUrl(imageName);
+
+  // 5. Upload File Produk (Bucket Private)
+  const fileName = `${Date.now()}-${productFile.name}`;
+  const { error: fileError } = await supabase.storage
+    .from("product-files")
+    .upload(fileName, productFile);
+
+  if (fileError) return { error: `Gagal upload file: ${fileError.message}` };
+
+  // 6. Simpan ke Database
+  const { error: dbError } = await supabase.from("products").insert({
+    user_id: user.id,
+    title: title,
+    description: description,
+    category: category,
+    price: price,
+    image_url: imageData.publicUrl,
+    file_url: fileName, // Simpan path saja
+  });
+
+  if (dbError) return { error: dbError.message };
+
+  // 7. Refresh Data
+  revalidatePath("/");
+  revalidatePath("/dashboard/products");
+
+  return { success: true };
+}
+
+export async function getLibraryItems() {
+  const supabase = await createClient();
+
+  // 1. Cek User
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  // 2. Ambil Transaksi Sukses + Data Produknya
+  const { data: transactions } = await supabase
+    .from("transactions")
+    .select(
+      `
+      id,
+      created_at,
+      products (
+        id,
+        title,
+        image_url,
+        category,
+        file_url,
+        price,
+        profiles ( full_name, avatar_url )
+      )
+    `,
+    )
+    .eq("buyer_id", user.id)
+    .eq("status", "success")
+    .order("created_at", { ascending: false });
+
+  // 3. Rapikan Data (Flatten) agar enak dipakai di UI
+  // Kita cuma butuh data 'products'-nya saja
+  const libraryItems =
+    transactions?.map((tx) => ({
+      ...tx.products,
+      purchased_at: tx.created_at, // Kita tambah info tanggal beli
+    })) || [];
+
+  return libraryItems;
 }

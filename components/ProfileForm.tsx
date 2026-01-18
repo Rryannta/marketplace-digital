@@ -5,6 +5,7 @@ import { Loader2, Save, User, Camera } from "lucide-react";
 import { useFormStatus } from "react-dom";
 import Image from "next/image";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -33,11 +34,15 @@ export default function ProfileForm({ profile }: { profile: any }) {
   };
 
   const handleUpdate = async (formData: FormData) => {
+    // Tampilkan loading
+    const toastId = toast.loading("Menyimpan perubahan...");
+
     const result = await updateProfile(formData);
+
     if (result?.error) {
-      alert(result.error);
+      toast.error(result.error, { id: toastId });
     } else {
-      alert("Profil berhasil diperbarui!");
+      toast.success("Profil berhasil diperbarui!", { id: toastId });
     }
   };
 

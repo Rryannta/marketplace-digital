@@ -7,6 +7,8 @@ import { Edit, Trash2, Check, X, Loader2 } from "lucide-react";
 import DeleteButton from "@/components/DeleteButton"; // Tombol hapus satuan
 import { deleteProducts } from "@/app/actions"; // Action hapus banyak
 import { useRouter } from "next/navigation";
+import Swal from "sweetalert2";
+import toast from "react-hot-toast";
 
 export default function ProductList({ products }: { products: any[] }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -19,7 +21,7 @@ export default function ProductList({ products }: { products: any[] }) {
       (prev) =>
         prev.includes(id)
           ? prev.filter((item) => item !== id) // Kalau sudah ada, buang
-          : [...prev, id] // Kalau belum, tambah
+          : [...prev, id], // Kalau belum, tambah
     );
   };
 
@@ -34,20 +36,33 @@ export default function ProductList({ products }: { products: any[] }) {
 
   // Eksekusi Hapus Banyak
   const handleBulkDelete = async () => {
-    if (
-      !confirm(`Yakin ingin menghapus ${selectedIds.length} produk terpilih?`)
-    )
-      return;
+    // 1. Konfirmasi SweetAlert
+    const confirmResult = await Swal.fire({
+      title: `Hapus ${selectedIds.length} produk?`,
+      text: "Tindakan ini permanen.",
+      icon: "warning",
+      background: "#1f2937",
+      color: "#fff",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Hapus Semua!",
+      cancelButtonText: "Batal",
+    });
+
+    if (!confirmResult.isConfirmed) return;
 
     setIsDeleting(true);
+    const toastId = toast.loading("Sedang menghapus..."); // Loading
+
     const result = await deleteProducts(selectedIds);
     setIsDeleting(false);
 
     if (result?.error) {
-      alert(result.error);
+      toast.error(result.error, { id: toastId });
     } else {
+      toast.success("Produk terpilih berhasil dihapus!", { id: toastId });
       setSelectedIds([]); // Reset pilihan
-      // Data otomatis refresh karena Server Action melakukan revalidatePath
     }
   };
 

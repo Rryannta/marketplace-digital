@@ -3,7 +3,7 @@ import BackButton from "@/components/BackButton";
 import Image from "next/image";
 import { Share2, ShieldCheck, Download, Star } from "lucide-react";
 import { notFound } from "next/navigation";
-import ProductAction from "@/components/ProductAction"; // <--- Komponen Pintar Kita
+import DownloadButton from "@/components/DownloadButton"; // <--- Komponen Pintar Kita
 
 interface ProductPageProps {
   params: {
@@ -25,7 +25,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
         full_name,
         avatar_url
       )
-    `
+    `,
     )
     .eq("id", id)
     .single();
@@ -115,11 +115,23 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
 
             {/* === PERBAIKAN UTAMA DI SINI === */}
             {/* Kita panggil komponen pintar, dan kirim datanya lewat props */}
-            <ProductAction
-              productId={product.id}
-              price={product.price}
-              fileUrl={product.file_url}
-            />
+            {/* 1. Tampilkan Harga Dulu (Karena tombol DownloadButton cuma berisi tombol) */}
+            <div className="mb-6">
+              <span className="text-3xl font-bold text-cyan-400">
+                {product.price === 0
+                  ? "GRATIS"
+                  : new Intl.NumberFormat("id-ID", {
+                      style: "currency",
+                      currency: "IDR",
+                      minimumFractionDigits: 0,
+                    }).format(product.price)}
+              </span>
+            </div>
+
+            {/* 2. Panggil Tombol Download Canggih Kita */}
+            <div className="mb-8">
+              <DownloadButton productId={product.id} price={product.price} />
+            </div>
             {/* =============================== */}
 
             <div className="space-y-4">

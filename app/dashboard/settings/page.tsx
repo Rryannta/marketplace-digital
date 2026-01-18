@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import ProfileForm from "@/components/ProfileForm";
+import SignOutButton from "@/components/SignOutButton";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -29,6 +30,11 @@ export default async function SettingsPage() {
 
       <div className="rounded-2xl border border-white/10 bg-[#12121a] p-8">
         <ProfileForm profile={profile} />
+      </div>
+
+      <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6">
+        <h3 className="mb-4 text-lg font-bold text-red-400">Zona Bahaya</h3>
+        <SignOutButton />
       </div>
     </div>
   );

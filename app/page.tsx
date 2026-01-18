@@ -2,7 +2,9 @@ import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
 import SearchInput from "@/components/SearchInput";
 import ProductCard from "@/components/ProductCard"; // <--- Import Component Kartu
-import LoadMore from "@/components/LoadMore"; // <--- Import Infinite Scroll
+import LoadMore from "@/components/LoadMore";
+import MobileMenu from "@/components/MobileMenu";
+import LibraryPage from "./library/page";
 import {
   ShoppingBag,
   Cpu,
@@ -72,7 +74,7 @@ export default async function Homepage({ searchParams }: HomepageProps) {
     // Cari di title ATAU description
     // Syntax Supabase: col1.ilike.val,col2.ilike.val
     query = query.or(
-      `title.ilike.%${querySearch}%,description.ilike.%${querySearch}%`
+      `title.ilike.%${querySearch}%,description.ilike.%${querySearch}%`,
     );
   }
 
@@ -106,13 +108,25 @@ export default async function Homepage({ searchParams }: HomepageProps) {
           </div>
 
           {user ? (
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium transition hover:bg-white/20"
-            >
-              <User size={16} />
-              Dashboard
-            </Link>
+            <div className="flex items-center gap-4">
+              {/* TAMBAHAN BARU */}
+              <Link
+                href="/library"
+                className="hidden md:flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition"
+              >
+                <Library size={18} />
+                Library
+              </Link>
+              {/* ------------- */}
+
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium transition hover:bg-white/20"
+              >
+                <User size={16} />
+                Dashboard
+              </Link>
+            </div>
           ) : (
             <Link
               href="/login"
@@ -124,6 +138,11 @@ export default async function Homepage({ searchParams }: HomepageProps) {
           )}
         </div>
       </nav>
+
+      {/* === FITUR BARU: MOBILE MENU === */}
+      {/* Hanya muncul di layar kecil (md:hidden) */}
+      <MobileMenu currentCategory={queryCategory} currentFilter={queryFilter} />
+      {/* =============================== */}
 
       {/* LAYOUT UTAMA */}
       <div className="flex w-full pt-6">
@@ -191,7 +210,7 @@ export default async function Homepage({ searchParams }: HomepageProps) {
         </aside>
 
         {/* KONTEN KANAN */}
-        <main className="flex-1 px-8 pb-20">
+        <main className="flex-1 px-4 md:px-8 pb-20">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-white flex items-center gap-2">
               {querySearch ? (
