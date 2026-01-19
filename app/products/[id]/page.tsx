@@ -14,24 +14,37 @@ interface ProductPageProps {
 export default async function ProductDetailPage({ params }: ProductPageProps) {
   // Await params (Wajib di Next.js 15)
   const { id } = await params;
-
   const supabase = await createClient();
+
+  // 1. Ambil Data Produk
   const { data: product, error } = await supabase
     .from("products")
-    .select(
-      `
-      *,
-      profiles (
-        full_name,
-        avatar_url
-      )
-    `,
-    )
+    .select(`*, profiles ( full_name, avatar_url )`)
     .eq("id", id)
     .single();
 
-  if (error || !product) {
-    notFound();
+  if (error || !product) notFound();
+
+  // 2. CEK APAKAH USER SUDAH BELI?
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  let isPurchased = false;
+
+  if (user) {
+    // Cek di tabel transaksi
+    const { data: transaction } = await supabase
+      .from("transactions")
+      .select("id")
+      .eq("buyer_id", user.id)
+      .eq("product_id", product.id)
+      .eq("status", "success") // Harus success
+      .single();
+
+    // Kalau transaksi ditemukan, atau produk milik sendiri -> dianggap purchased
+    if (transaction || product.user_id === user.id) {
+      isPurchased = true;
+    }
   }
 
   // (Kita hapus formatRupiah di sini karena sudah ditangani di dalam ProductAction)
@@ -130,7 +143,11 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
 
             {/* 2. Panggil Tombol Download Canggih Kita */}
             <div className="mb-8">
-              <DownloadButton productId={product.id} price={product.price} />
+              <DownloadButton
+                productId={product.id}
+                price={product.price}
+                isPurchased={isPurchased} // <--- Pass props ini
+              />
             </div>
             {/* =============================== */}
 

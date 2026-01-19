@@ -19,7 +19,7 @@ export default function ProductCard({ product }: { product: any }) {
       <div className="aspect-[4/3] w-full overflow-hidden bg-gray-800 relative">
         <Image
           src={product.image_url || "/placeholder.png"}
-          alt={product.title}
+          alt={product.title || "Gambar Produk"}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-110"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

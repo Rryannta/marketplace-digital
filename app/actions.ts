@@ -471,17 +471,202 @@ export async function getLibraryItems() {
       )
     `,
     )
-    .eq("buyer_id", user.id)
+    .eq("user_id", user.id)
     .eq("status", "success")
     .order("created_at", { ascending: false });
 
-  // 3. Rapikan Data (Flatten) agar enak dipakai di UI
-  // Kita cuma butuh data 'products'-nya saja
+  // === PERBAIKAN DI SINI ===
   const libraryItems =
-    transactions?.map((tx) => ({
-      ...tx.products,
-      purchased_at: tx.created_at, // Kita tambah info tanggal beli
-    })) || [];
+    transactions
+      // 1. Filter: Hanya ambil transaksi yang data 'products'-nya TIDAK null
+      ?.filter((tx) => tx.products !== null)
+      // 2. Baru di-map seperti biasa
+      .map((tx) => ({
+        ...tx.products,
+        purchased_at: tx.created_at,
+      })) || [];
 
   return libraryItems;
+}
+
+export async function getSellerStats() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // 1. Ambil semua ID Produk milik user ini
+  const { data: myProducts } = await supabase
+    .from("products")
+    .select("id, title, price")
+    .eq("user_id", user.id);
+
+  const productIds = myProducts?.map((p) => p.id) || [];
+  const totalProducts = myProducts?.length || 0;
+
+  // 2. Jika belum punya produk, return 0 semua
+  if (productIds.length === 0) {
+    return {
+      totalRevenue: 0,
+      totalSales: 0,
+      totalProducts: 0,
+      recentSales: [],
+    };
+  }
+
+  // 3. Ambil Transaksi yang PRODUCT_ID-nya ada di daftar produk user
+  // (Artinya: Orang lain membeli produk kita)
+  const { data: transactions } = await supabase
+    .from("transactions")
+    .select(
+      `
+      amount,
+      created_at,
+      profiles ( full_name, avatar_url ),
+      products ( title )
+    `,
+    )
+    .in("product_id", productIds) // Filter transaksi berdasarkan produk kita
+    .eq("status", "success")
+    .order("created_at", { ascending: false }); // Paling baru diatas
+
+  // 4. Hitung Manual
+  const totalSales = transactions?.length || 0;
+
+  // Hitung total uang (amount)
+  const totalRevenue =
+    transactions?.reduce((acc, curr) => acc + curr.amount, 0) || 0;
+
+  // Ambil 5 transaksi terakhir saja untuk ditampilkan di dashboard
+  const recentSales = transactions?.slice(0, 5) || [];
+
+  return {
+    totalRevenue,
+    totalSales,
+    totalProducts,
+    recentSales,
+  };
+}
+
+const midtransClient = require("midtrans-client");
+export async function createTransactionToken(productId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Wajib login untuk membeli." };
+
+  // 1. Ambil Detail Produk
+  const { data: product } = await supabase
+    .from("products")
+    .select("*")
+    .eq("id", productId)
+    .single();
+
+  if (!product) return { error: "Produk tidak ditemukan." };
+
+  // 2. Setup Midtrans
+  const snap = new midtransClient.Snap({
+    isProduction: false, // Ubah ke true nanti kalau sudah live
+    serverKey: process.env.MIDTRANS_SERVER_KEY,
+  });
+
+  // 3. Buat Order ID Unik (Gabungan ID User + Waktu)
+  // Contoh: ORDER-user123-17239999
+  const orderId = `ORDER-${user.id.slice(0, 5)}-${Date.now()}`;
+
+  // 4. Siapkan Parameter Transaksi
+  const parameter = {
+    transaction_details: {
+      order_id: orderId,
+      gross_amount: product.price,
+    },
+    item_details: [
+      {
+        id: product.id,
+        price: product.price,
+        quantity: 1,
+        name: product.title.substring(0, 50), // Midtrans membatasi panjang nama
+      },
+    ],
+    customer_details: {
+      first_name: user.user_metadata?.full_name || "Customer",
+      email: user.email,
+    },
+  };
+
+  // 5. Minta Token ke Midtrans
+  try {
+    const transaction = await snap.createTransaction(parameter);
+
+    // 6. CATAT TRANSAKSI "PENDING" KE DATABASE KITA
+    await supabase.from("transactions").insert({
+      id: orderId,
+
+      // PERBAIKAN: Ganti 'buyer_id' jadi 'user_id' sesuai nama kolom database
+      user_id: user.id,
+
+      product_id: product.id,
+      amount: product.price,
+      status: "pending",
+    });
+
+    return { token: transaction.token };
+  } catch (err: any) {
+    console.error("Midtrans Error:", err);
+    return { error: "Gagal memproses pembayaran." };
+  }
+}
+
+export async function verifyTransaction(orderId: string) {
+  const supabase = await createClient();
+
+  // 1. Setup Core API
+  // Kita pakai CoreApi untuk cek status (bukan Snap)
+  let coreApi = new midtransClient.CoreApi({
+    isProduction: false,
+    serverKey: process.env.MIDTRANS_SERVER_KEY,
+    clientKey: process.env.MIDTRANS_CLIENT_KEY,
+  });
+
+  try {
+    console.log(`🔍 Mengecek status Order ID: ${orderId} via SDK...`);
+
+    // 2. Minta Status ke Midtrans (Pakai fungsi bawaan library)
+    const data = await coreApi.transaction.status(orderId);
+
+    // 3. Lihat Hasilnya di Terminal
+    console.log("📩 Status Transaksi:", data.transaction_status);
+
+    // 4. Cek Logika Lunas
+    if (
+      data.transaction_status == "settlement" ||
+      data.transaction_status == "capture"
+    ) {
+      console.log("✅ Pembayaran LUNAS. Update Database...");
+
+      const { error } = await supabase
+        .from("transactions")
+        .update({ status: "success" })
+        .eq("id", orderId);
+
+      if (error) {
+        console.error("❌ Gagal update DB:", error);
+      } else {
+        // Refresh halaman user
+        revalidatePath("/products/[id]");
+        revalidatePath("/library");
+      }
+
+      return { status: "success" };
+    }
+
+    return { status: "pending" };
+  } catch (error: any) {
+    // Tangkap error detail dari Midtrans
+    console.error("❌ Error SDK Midtrans:", error.message);
+    return { error: "Gagal verifikasi pembayaran" };
+  }
 }

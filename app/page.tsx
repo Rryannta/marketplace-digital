@@ -19,6 +19,7 @@ import {
   Flame,
   Sparkles,
   Tag,
+  Library
 } from "lucide-react";
 
 // MENU UTAMA (Discover)

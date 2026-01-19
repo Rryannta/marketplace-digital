@@ -2,15 +2,13 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { getLibraryItems } from "@/app/actions";
 import Link from "next/link";
-import { Library, Search, ShoppingBag } from "lucide-react";
-import ProductCard from "@/components/ProductCard"; // Kita reuse komponen kartu
-import Navbar from "@/components/Navbar"; // (Opsional) Jika kamu punya komponen Navbar terpisah
-// Kalau tidak punya komponen Navbar terpisah, kita copas navbar manual atau pakai Layout utama
+import { Library, ShoppingBag } from "lucide-react"; // Search dihapus jika tidak dipakai
+import ProductCard from "@/components/ProductCard";
 
 export default async function LibraryPage() {
   const supabase = await createClient();
 
-  // 1. Cek Login (Halaman Privat)
+  // 1. Cek Login
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -21,8 +19,6 @@ export default async function LibraryPage() {
 
   return (
     <div className="min-h-screen bg-[#05050a] pb-20 pt-24 text-white">
-      {/* Header Sederhana (Navbar biasanya sudah ada di layout.tsx) */}
-
       <div className="mx-auto max-w-7xl px-6">
         {/* Judul Halaman */}
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -51,13 +47,11 @@ export default async function LibraryPage() {
         {/* Grid Produk */}
         {items.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {items.map((product: any) => (
-              <div key={product.id} className="relative group">
-                {/* Kita pakai ProductCard yang sudah ada */}
+            {items.map((product: any, index: number) => (
+              // PERBAIKAN: Komentar dihapus/dipindah agar tidak error
+              <div key={`${product.id}-${index}`} className="relative group">
                 <ProductCard product={product} />
 
-                {/* Overlay Tambahan Khusus Library (Opsional) */}
-                {/* Misalnya badge "Dimiliki" */}
                 <div className="absolute top-3 right-3 z-10 pointer-events-none">
                   <span className="rounded-full bg-green-500/90 px-3 py-1 text-[10px] font-bold text-white shadow-lg backdrop-blur-md">
                     Sudah Punya

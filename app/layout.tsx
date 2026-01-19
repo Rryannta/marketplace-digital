@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "react-hot-toast"; // <--- 1. IMPORT INI
+import { Toaster } from "react-hot-toast";
+import Script from "next/script"; // <--- 1. IMPORT INI
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -16,18 +17,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id">
+    <html lang="id" suppressHydrationWarning>
       <body className={inter.className}>
-        {/* 2. PASANG DI SINI (Di atas children) */}
         <Toaster
           position="top-center"
           toastOptions={{
-            style: {
-              background: "#333",
-              color: "#fff",
-            },
+            style: { background: "#333", color: "#fff" },
           }}
         />
+
+        {/* 2. PASANG SCRIPT MIDTRANS DI SINI */}
+        <Script
+          src="https://app.sandbox.midtrans.com/snap/snap.js"
+          data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
+          strategy="lazyOnload"
+        />
+
         {children}
       </body>
     </html>
