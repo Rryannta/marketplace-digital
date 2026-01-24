@@ -36,9 +36,9 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
     const { data: transaction } = await supabase
       .from("transactions")
       .select("id")
-      .eq("buyer_id", user.id)
+      .eq("user_id", user.id) // <--- GANTI JADI INI
       .eq("product_id", product.id)
-      .eq("status", "success") // Harus success
+      .eq("status", "success")
       .single();
 
     // Kalau transaksi ditemukan, atau produk milik sendiri -> dianggap purchased

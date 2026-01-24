@@ -29,7 +29,7 @@ export async function getDownloadUrl(productId: string) {
   const { data: existingTx } = await supabase
     .from("transactions")
     .select("id")
-    .eq("buyer_id", user.id)
+    .eq("user_id", user.id)
     .eq("product_id", product.id)
     .eq("status", "success")
     .single();
@@ -82,45 +82,31 @@ export async function deleteProduct(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
 
-  // 2. Ambil Data Produk Dulu (Untuk dapat nama file gambar/zip yang mau dihapus)
+  // 2. Validasi Pemilik
   const { data: product } = await supabase
     .from("products")
-    .select("image_url, file_url, user_id")
+    .select("user_id")
     .eq("id", productId)
     .single();
 
-  if (!product) return { error: "Produk tidak ditemukan" };
-
-  // Validasi: Pastikan yang menghapus adalah PEMILIK produk
-  if (product.user_id !== user.id) {
+  if (!product || product.user_id !== user.id) {
     return { error: "Anda tidak berhak menghapus produk ini." };
   }
 
-  // 3. Hapus Gambar dari Storage (Jika ada)
-  if (product.image_url) {
-    const imagePath = product.image_url.split("product-images/")[1];
-    if (imagePath)
-      await supabase.storage.from("product-images").remove([imagePath]);
-  }
+  // 3. LAKUKAN SOFT DELETE (ARSIP)
+  // Kita TIDAK menghapus gambar/file dari storage,
+  // supaya pembeli lama masih bisa download.
 
-  // 4. Hapus File Produk dari Storage (Jika ada)
-  if (product.file_url) {
-    const filePath = product.file_url.split("product-files/")[1];
-    if (filePath)
-      await supabase.storage.from("product-files").remove([filePath]);
-  }
-
-  // 5. Hapus Data dari Database
   const { error } = await supabase
     .from("products")
-    .delete()
+    .update({ is_archived: true }) // <--- Cuma update status
     .eq("id", productId);
 
   if (error) return { error: error.message };
 
-  // 6. Refresh Halaman Dashboard
+  // 4. Refresh Halaman
   revalidatePath("/dashboard/products");
-  revalidatePath("/"); // Refresh home juga biar produk hilang dari etalase
+  revalidatePath("/");
 
   return { success: true };
 }
@@ -227,11 +213,7 @@ export async function fetchProducts(
 ) {
   const supabase = await createClient();
 
-  // Hitung Range Data (Pagination)
-  // Page 1: 0 - 9
-  // Page 2: 10 - 19
-  // Page 3: 20 - 29
-  const limit = 8; // Kita load 8 produk per scroll
+  const limit = 8;
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
@@ -243,23 +225,40 @@ export async function fetchProducts(
       profiles ( full_name, avatar_url )
     `,
     )
-    .range(from, to); // <--- KUNCI PAGINATION ADA DI SINI
+    .range(from, to);
 
-  // Terapkan Filter yang sama seperti di Homepage
+  query = query.eq("is_archived", false);
+
+  // 1. Filter Search
   if (searchQuery) {
     query = query.or(
       `title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`,
     );
   }
+
+  // 2. Filter Kategori
   if (category && category !== "all") {
     query = query.eq("category", category);
   }
-  if (filter === "sale") {
-    query = query.lt("price", 50000);
-  }
 
-  // Default Order
-  query = query.order("created_at", { ascending: false });
+  // 3. FILTER TAB (SAMAKAN DENGAN getProducts)
+  switch (filter) {
+    case "trending":
+      // Urutkan berdasarkan penjualan terbanyak
+      query = query.order("sales_count", { ascending: false });
+      break;
+
+    case "sale":
+      // Hanya ambil yang punya harga coret
+      query = query.not("original_price", "is", null);
+      query = query.order("price", { ascending: true });
+      break;
+
+    case "terbaru":
+    default:
+      query = query.order("created_at", { ascending: false });
+      break;
+  }
 
   const { data } = await query;
   return data || [];
@@ -274,50 +273,37 @@ export async function deleteProducts(ids: string[]) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
 
-  // 2. Ambil Data Produk (Cari file yang harus dihapus)
-  // Kita filter pakai "in" (daftar ID)
+  // 2. Validasi: Pastikan SEMUA produk milik user ini
+  // Kita cek dulu apakah user berhak menghapus ID-ID tersebut
   const { data: products } = await supabase
     .from("products")
-    .select("id, image_url, file_url, user_id")
+    .select("id, user_id")
     .in("id", ids);
 
   if (!products || products.length === 0)
     return { error: "Produk tidak ditemukan" };
 
-  // 3. Validasi: Pastikan SEMUA produk milik user ini
+  // Filter hanya produk milik user yang sedang login
   const validProducts = products.filter((p) => p.user_id === user.id);
   const validIds = validProducts.map((p) => p.id);
 
   if (validIds.length === 0)
     return { error: "Tidak ada produk yang bisa dihapus" };
 
-  // 4. Kumpulkan Sampah (File & Gambar)
-  const imagePaths: string[] = [];
-  const filePaths: string[] = [];
+  // 3. LAKUKAN SOFT DELETE (ARSIP)
+  // CATATAN PENTING:
+  // - Kita HAPUS logika penghapusan Storage (remove image/file)
+  //   agar pembeli lama tetap bisa akses file-nya.
+  // - Kita GANTI .delete() menjadi .update()
 
-  validProducts.forEach((p) => {
-    if (p.image_url) {
-      const path = p.image_url.split("product-images/")[1];
-      if (path) imagePaths.push(path);
-    }
-    if (p.file_url) {
-      const path = p.file_url.split("product-files/")[1];
-      if (path) filePaths.push(path);
-    }
-  });
-
-  // 5. Buang Sampah ke Storage
-  if (imagePaths.length > 0)
-    await supabase.storage.from("product-images").remove(imagePaths);
-  if (filePaths.length > 0)
-    await supabase.storage.from("product-files").remove(filePaths);
-
-  // 6. Hapus Data dari Database
-  const { error } = await supabase.from("products").delete().in("id", validIds);
+  const { error } = await supabase
+    .from("products")
+    .update({ is_archived: true }) // <--- Ubah Status jadi Arsip
+    .in("id", validIds); // <--- Update semua ID sekaligus
 
   if (error) return { error: error.message };
 
-  // 7. Refresh
+  // 4. Refresh
   revalidatePath("/dashboard/products");
   revalidatePath("/");
 
@@ -660,6 +646,32 @@ export async function verifyTransaction(orderId: string) {
         revalidatePath("/library");
       }
 
+      const { data: txData } = await supabase
+        .from("transactions")
+        .select("product_id")
+        .eq("id", orderId)
+        .single();
+
+      if (txData) {
+        // 2. Kita pakai RPC (Remote Procedure Call) biar aman,
+        // tapi cara manual (Ambil -> Tambah -> Simpan) juga oke untuk awal.
+
+        // Ambil jumlah sales sekarang
+        const { data: prod } = await supabase
+          .from("products")
+          .select("sales_count")
+          .eq("id", txData.product_id)
+          .single();
+
+        // Update +1
+        if (prod) {
+          await supabase
+            .from("products")
+            .update({ sales_count: (prod.sales_count || 0) + 1 })
+            .eq("id", txData.product_id);
+        }
+      }
+
       return { status: "success" };
     }
 
@@ -669,4 +681,131 @@ export async function verifyTransaction(orderId: string) {
     console.error("❌ Error SDK Midtrans:", error.message);
     return { error: "Gagal verifikasi pembayaran" };
   }
+}
+
+export async function getSearchSuggestions(query: string) {
+  const supabase = await createClient();
+
+  if (!query || query.length < 2) return []; // Jangan cari kalau cuma 1 huruf
+
+  console.log(`🔍 Server mencari: "${query}"`); // <--- LOG 1
+
+  // Cari produk yang judulnya mengandung kata kunci
+  const { data, error } = await supabase
+    .from("products")
+    .select("id, title, category")
+    .ilike("title", `%${query}%`) // Case insensitive search
+    .limit(5); // Ambil 5 saja biar mirip Youtube suggestions
+
+  if (error) {
+    console.error("❌ Error Database:", error); // <--- LOG 2 (Jika Error)
+    return [];
+  }
+
+  console.log("✅ Hasil Ditemukan:", data);
+
+  return data || [];
+}
+
+export async function saveSearchHistory(query: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user || !query.trim()) return;
+
+  const cleanQuery = query.trim().toLowerCase();
+
+  // Upsert: Kalau belum ada -> Insert. Kalau sudah ada -> Update created_at
+  await supabase.from("search_history").upsert(
+    {
+      user_id: user.id,
+      query: cleanQuery,
+      created_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id, query" }, // Kunci unik yang kita buat di SQL
+  );
+}
+
+// 2. Ambil History Terakhir User
+export async function getSearchHistory() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("search_history")
+    .select("query")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false }) // Yang baru dicari paling atas
+    .limit(5); // Ambil 5 terakhir saja
+
+  return data?.map((d) => d.query) || [];
+}
+
+export async function getProducts(
+  search?: string,
+  category?: string,
+  filter?: string,
+) {
+  const supabase = await createClient();
+
+  // 1. Query Dasar
+  let query = supabase.from("products").select(`
+      *,
+      profiles ( full_name, avatar_url )
+    `);
+
+  query = query.eq("is_archived", false);
+
+  // 2. Filter Search
+  if (search) {
+    query = query.ilike("title", `%${search}%`);
+  }
+
+  // 3. Filter Kategori
+  if (category) {
+    query = query.eq("category", category);
+  }
+
+  // 4. FILTER TAB
+  switch (filter) {
+    case "trending":
+      // Urutkan berdasarkan kolom sales_count (Terbanyak ke Sedikit)
+      query = query.order("sales_count", { ascending: false });
+      break; // Samakan dengan activeKey di page.tsx
+    case "terbaru":
+      query = query.order("created_at", { ascending: false });
+      break;
+
+    case "sale":
+      // Filter: Hanya ambil yang original_price-nya TIDAK null (ada isinya)
+      query = query.not("original_price", "is", null);
+
+      // Opsional: Urutkan dari diskon terbesar (butuh logika complex)
+      // Untuk sekarang, urutkan termurah saja biar tetap relevan
+      query = query.order("price", { ascending: true });
+      break;
+
+    default:
+      // Default: Urutkan Terbaru
+      query = query.order("created_at", { ascending: false });
+      break;
+  }
+
+  // 5. BATASI HANYA 8 PRODUK (PENTING AGAR HALAMAN TIDAK BERAT)
+  query = query.range(0, 7);
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching products:", error);
+    return [];
+  }
+
+  return data || [];
 }

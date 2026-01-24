@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // 1. TAMBAHAN UTAMA: Naikkan Limit Upload
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb", // Atur jadi 10MB (atau lebih jika perlu)
+    },
+  },
   images: {
     remotePatterns: [
       // 1. Izin untuk Gambar Produk (Supabase) - JANGAN DIHAPUS
@@ -16,6 +22,13 @@ const nextConfig: NextConfig = {
         hostname: "ui-avatars.com",
         port: "",
         pathname: "/api/**",
+      },
+      // 3. Izin untuk Avatar Google
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        port: "",
+        pathname: "/**",
       },
     ],
   },

@@ -14,6 +14,7 @@ export default async function MyProductsPage() {
     .from("products")
     .select("*")
     .eq("user_id", user?.id)
+    .eq("is_archived", false)
     .order("created_at", { ascending: false });
 
   return (

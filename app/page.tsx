@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
+import { getProducts } from "@/app/actions"; // <--- Import fungsi backend
 import Link from "next/link";
-import SearchInput from "@/components/SearchInput";
+import SearchBar from "@/components/SearchBar";
 import ProductCard from "@/components/ProductCard"; // <--- Import Component Kartu
 import LoadMore from "@/components/LoadMore";
 import MobileMenu from "@/components/MobileMenu";
@@ -19,7 +20,7 @@ import {
   Flame,
   Sparkles,
   Tag,
-  Library
+  Library,
 } from "lucide-react";
 
 // MENU UTAMA (Discover)
@@ -53,6 +54,8 @@ interface HomepageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
+// app/page.tsx
+
 export default async function Homepage({ searchParams }: HomepageProps) {
   const supabase = await createClient();
 
@@ -65,29 +68,14 @@ export default async function Homepage({ searchParams }: HomepageProps) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // --- QUERY AWAL (Hanya 8 item pertama) ---
-  let query = supabase.from("products").select(`
-      *,
-      profiles ( full_name, avatar_url )
-    `);
+  // === PERBAIKAN DI SINI ===
+  // 1. Panggil fungsi backend (Actions)
+  const products = await getProducts(querySearch, queryCategory, queryFilter);
 
-  if (querySearch) {
-    // Cari di title ATAU description
-    // Syntax Supabase: col1.ilike.val,col2.ilike.val
-    query = query.or(
-      `title.ilike.%${querySearch}%,description.ilike.%${querySearch}%`,
-    );
-  }
+  // 2. HAPUS SEMUA KODE 'query = ...' YANG LAMA DI BAWAH INI
+  // (Kode lama yang kamu paste di pertanyaanmu tadi membuat error karena variabel 'query' tidak ada)
 
-  if (queryCategory && queryCategory !== "all")
-    query = query.eq("category", queryCategory);
-  if (queryFilter === "sale") query = query.lt("price", 50000);
-
-  // Batasi hanya 8 produk awal (Range 0-7)
-  query = query.order("created_at", { ascending: false }).range(0, 7);
-
-  const { data: products } = await query;
-  // ----------------------------------------
+  // =========================
 
   return (
     <div className="min-h-screen bg-[#05050a] text-white">
@@ -105,12 +93,11 @@ export default async function Homepage({ searchParams }: HomepageProps) {
           </Link>
 
           <div className="hidden flex-1 md:block max-w-2xl">
-            <SearchInput />
+            <SearchBar />
           </div>
 
           {user ? (
             <div className="flex items-center gap-4">
-              {/* TAMBAHAN BARU */}
               <Link
                 href="/library"
                 className="hidden md:flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition"
@@ -118,7 +105,6 @@ export default async function Homepage({ searchParams }: HomepageProps) {
                 <Library size={18} />
                 Library
               </Link>
-              {/* ------------- */}
 
               <Link
                 href="/dashboard"
@@ -140,10 +126,8 @@ export default async function Homepage({ searchParams }: HomepageProps) {
         </div>
       </nav>
 
-      {/* === FITUR BARU: MOBILE MENU === */}
-      {/* Hanya muncul di layar kecil (md:hidden) */}
+      {/* MOBILE MENU */}
       <MobileMenu currentCategory={queryCategory} currentFilter={queryFilter} />
-      {/* =============================== */}
 
       {/* LAYOUT UTAMA */}
       <div className="flex w-full pt-6">
@@ -224,6 +208,14 @@ export default async function Homepage({ searchParams }: HomepageProps) {
                   Kategori:{" "}
                   <span className="text-cyan-400">{queryCategory}</span>
                 </>
+              ) : queryFilter === "sale" ? (
+                <>
+                  <Tag size={24} className="text-red-400" /> Diskon / Promo
+                </>
+              ) : queryFilter === "trending" ? (
+                <>
+                  <Flame size={24} className="text-orange-500" /> Sedang Tren
+                </>
               ) : (
                 <>
                   <Sparkles size={24} className="text-cyan-400" /> Baru Diupload
@@ -234,17 +226,17 @@ export default async function Homepage({ searchParams }: HomepageProps) {
 
           {products && products.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-              {/* 1. RENDER 8 PRODUK PERTAMA (SERVER SIDE) */}
+              {/* 1. RENDER PRODUK DARI BACKEND */}
               {products.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
 
-              {/* 2. INFINITE SCROLL COMPONENT (CLIENT SIDE) */}
+              {/* 2. INFINITE SCROLL */}
               <LoadMore
                 search={querySearch}
                 category={queryCategory}
                 filter={queryFilter}
-                initialOffset={2} // Mulai load dari halaman 2 (karena hal 1 udah diambil di atas)
+                initialOffset={2}
               />
             </div>
           ) : (
