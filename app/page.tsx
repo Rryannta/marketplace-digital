@@ -81,6 +81,7 @@ export default async function Homepage({ searchParams }: HomepageProps) {
     <div className="min-h-screen bg-[#05050a] text-white">
       {/* NAVBAR */}
       <nav className="sticky top-0 z-50 border-b border-white/5 bg-[#05050a]/80 backdrop-blur-xl px-6 py-4">
+        {/* BARIS 1: Logo & User Menu */}
         <div className="flex w-full items-center justify-between gap-8">
           <Link
             href="/"
@@ -89,9 +90,16 @@ export default async function Homepage({ searchParams }: HomepageProps) {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-600 shadow-lg shadow-cyan-500/20">
               <ShoppingBag size={18} className="text-white" />
             </div>
-            Marketplace<span className="text-cyan-400">Kita</span>
+            {/* Sembunyikan teks MarketplaceKita di HP biar gak makan tempat, opsional */}
+            <span className="hidden sm:inline">
+              Marketplace<span className="text-cyan-400">Kita</span>
+            </span>
+            <span className="sm:hidden">
+              MP<span className="text-cyan-400">Kita</span>
+            </span>
           </Link>
 
+          {/* SEARCH BAR DESKTOP (Tetap Hidden di Mobile) */}
           <div className="hidden flex-1 md:block max-w-2xl">
             <SearchBar />
           </div>
@@ -111,7 +119,7 @@ export default async function Homepage({ searchParams }: HomepageProps) {
                 className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium transition hover:bg-white/20"
               >
                 <User size={16} />
-                Dashboard
+                <span className="hidden sm:inline">Dashboard</span>
               </Link>
             </div>
           ) : (
@@ -123,6 +131,12 @@ export default async function Homepage({ searchParams }: HomepageProps) {
               Masuk
             </Link>
           )}
+        </div>
+
+        {/* BARIS 2: SEARCH BAR MOBILE (Baru) */}
+        {/* md:hidden artinya HANYA muncul di layar kecil, hilang di desktop */}
+        <div className="mt-4 md:hidden w-full">
+          <SearchBar />
         </div>
       </nav>
 
