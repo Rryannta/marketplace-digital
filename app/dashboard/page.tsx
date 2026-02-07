@@ -29,9 +29,9 @@ export default async function DashboardPage() {
       {/* HEADER */}
       <div>
         <h1 className="text-3xl font-bold text-white">Dashboard Overview</h1>
-        <p className="text-gray-400">
-          Pantau performa penjualan aset digitalmu.
-        </p>
+        <div className="flex items-center gap-2 text-gray-400">
+          <p>Pantau performa penjualan aset digitalmu.</p>
+        </div>
       </div>
 
       {/* === 1. KARTU STATISTIK (GRID) === */}

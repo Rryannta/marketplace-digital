@@ -72,11 +72,6 @@ export default async function DashboardLayout({
               Saya Pembeli
             </p>
             <NavItem
-              href="/dashboard/library"
-              icon={<Download size={20} />}
-              label="Library / Unduhan"
-            />
-            <NavItem
               href="/dashboard/settings"
               icon={<Settings size={20} />}
               label="Pengaturan Akun"

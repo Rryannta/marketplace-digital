@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { getLibraryItems } from "@/app/actions";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Library, ShoppingBag } from "lucide-react"; // Search dihapus jika tidak dipakai
 import ProductCard from "@/components/ProductCard";
@@ -20,6 +21,15 @@ export default async function LibraryPage() {
   return (
     <div className="min-h-screen bg-[#05050a] pb-20 pt-24 text-white">
       <div className="mx-auto max-w-7xl px-6">
+        <div className="mb-8">
+          <Link
+            href="/dashboard"
+            className="flex w-fit items-center gap-2 text-sm text-gray-400 hover:text-white transition"
+          >
+            <ArrowLeft size={18} />
+            Kembali ke Dashboard
+          </Link>
+        </div>
         {/* Judul Halaman */}
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>

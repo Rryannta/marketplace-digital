@@ -19,6 +19,7 @@ import {
   Home,
   Flame,
   Sparkles,
+  ArrowRight,
   Tag,
   Library,
 } from "lucide-react";
@@ -210,6 +211,53 @@ export default async function Homepage({ searchParams }: HomepageProps) {
 
         {/* KONTEN KANAN */}
         <main className="flex-1 px-4 md:px-8 pb-20">
+          {/* LOGIKA: Hanya muncul jika TIDAK ada Search, Kategori, atau Filter */}
+          {!querySearch && !queryCategory && !queryFilter && (
+            <div className="relative mb-8 overflow-hidden rounded-2xl border border-white/10 bg-[#0f0f16]">
+              {/* 1. Background Gradient Halus */}
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-purple-500/10" />
+
+              {/* 2. Efek Glow Pojok Kanan (Hiasan) */}
+              <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-cyan-500/20 blur-3xl opacity-50 pointer-events-none"></div>
+
+              {/* 3. Konten Banner */}
+              <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-8">
+                <div className="max-w-xl">
+                  {/* Badge Kecil */}
+                  <div className="inline-flex items-center gap-2 rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-[10px] font-bold text-yellow-400 mb-3 uppercase tracking-wider">
+                    <Sparkles size={12} />
+                    Official Marketplace
+                  </div>
+
+                  {/* Judul Besar */}
+                  <h1 className="text-2xl md:text-3xl font-bold text-white mb-2 leading-tight">
+                    Upgrade Projectmu dengan <br />
+                    <span className="text-cyan-400">Aset Digital Premium.</span>
+                  </h1>
+
+                  {/* Deskripsi */}
+                  <p className="text-gray-400 text-sm leading-relaxed mb-6 md:mb-0">
+                    Ribuan template website, source code, dan aset game siap
+                    pakai. Transaksi aman, download instan.
+                  </p>
+                </div>
+
+                {/* Tombol Aksi (CTA) */}
+                <div className="flex flex-col gap-3 w-full md:w-auto">
+                  <Link
+                    href="/dashboard/products/new"
+                    className="flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-cyan-600 px-6 py-3 text-sm font-bold text-white hover:bg-cyan-500 transition shadow-lg shadow-cyan-500/20"
+                  >
+                    Mulai Jualan
+                    <ArrowRight size={16} />
+                  </Link>
+                  <p className="text-[10px] text-center text-gray-500">
+                    Gabung dengan 100+ Kreator
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-white flex items-center gap-2">
               {querySearch ? (
@@ -266,7 +314,7 @@ export default async function Homepage({ searchParams }: HomepageProps) {
               </p>
               <Link
                 href="/"
-                className="px-6 py-2 rounded-full bg-cyan-600 text-white font-bold text-sm hover:bg-cyan-500 transition"
+                className="px-6 py-2 rounded-full bg-cyan-600 text-white fo nt-bold text-sm hover:bg-cyan-500 transition"
               >
                 Reset Filter
               </Link>
