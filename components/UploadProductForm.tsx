@@ -35,12 +35,23 @@ export default function UploadProductForm() {
   const router = useRouter();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  // Fungsi untuk menampilkan preview gambar saat dipilih
+  // 1. STATE UNTUK NAMA FILE (Agar muncul setelah dipilih)
+  const [fileName, setFileName] = useState<string | null>(null);
+
+  // Fungsi untuk menampilkan preview gambar cover
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
       setImagePreview(url);
+    }
+  };
+
+  // 2. FUNGSI HANDLE FILE ASET (Simpan nama file)
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFileName(file.name);
     }
   };
 
@@ -84,16 +95,48 @@ export default function UploadProductForm() {
                 <Tag size={14} /> Kategori
               </label>
               <div className="relative">
+                {/* === PERBAIKAN DROPDOWN DI SINI === */}
                 <select
                   name="category"
-                  className="w-full appearance-none rounded-xl border border-white/10 bg-black/20 p-4 text-white transition focus:border-cyan-500 focus:bg-cyan-500/5 focus:outline-none"
+                  required
+                  defaultValue="" // <--- Pindahkan default value ke sini!
+                  className="w-full rounded-xl border border-white/10 bg-[#05050a] px-4 py-3 text-white outline-none focus:border-cyan-500 transition-all appearance-none"
                 >
-                  <option value="Template Web">Template Web</option>
-                  <option value="Desain & UI">Desain & UI</option>
-                  <option value="Game Assets">Game Assets</option>
-                  <option value="E-Books">E-Books</option>
-                  <option value="Audio">Audio</option>
-                  <option value="3D Models">3D Models</option>
+                  <option
+                    value=""
+                    disabled
+                    // HAPUS 'selected' DARI SINI
+                    className="bg-[#05050a] text-gray-400"
+                  >
+                    Pilih Kategori...
+                  </option>
+                  <option
+                    value="Template Web"
+                    className="bg-[#05050a] text-white"
+                  >
+                    Template Web
+                  </option>
+                  <option
+                    value="Desain & UI"
+                    className="bg-[#05050a] text-white"
+                  >
+                    Desain & UI
+                  </option>
+                  <option
+                    value="Game Assets"
+                    className="bg-[#05050a] text-white"
+                  >
+                    Game Assets
+                  </option>
+                  <option value="E-Books" className="bg-[#05050a] text-white">
+                    E-Books
+                  </option>
+                  <option value="Audio" className="bg-[#05050a] text-white">
+                    Audio
+                  </option>
+                  <option value="3D Models" className="bg-[#05050a] text-white">
+                    3D Models
+                  </option>
                 </select>
                 <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">
                   ▼
@@ -176,22 +219,43 @@ export default function UploadProductForm() {
             </label>
           </div>
 
-          {/* Upload File Produk */}
+          {/* === UPLOAD FILE ASET (YANG SUDAH DIPERBAIKI) === */}
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500">
-              <Box size={14} /> File Aset (ZIP/RAR)
+              <Box size={14} /> File Aset Utama
             </label>
             <label className="group flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/10 bg-black/20 transition hover:border-cyan-500 hover:bg-cyan-500/5">
-              <div className="flex flex-col items-center gap-2 text-gray-500 transition group-hover:text-cyan-400">
-                <Box size={24} />
-                <span className="text-sm font-medium">Upload file ZIP/PDF</span>
-              </div>
+              {/* Logika Tampilan: Kalau file sudah dipilih, munculkan namanya */}
+              {fileName ? (
+                <div className="flex flex-col items-center gap-2 text-cyan-400 animate-in fade-in zoom-in duration-300">
+                  <FileText size={32} />
+                  <span className="text-sm font-bold max-w-[200px] truncate text-center">
+                    {fileName}
+                  </span>
+                  <span className="text-[10px] text-gray-500">
+                    Klik untuk ganti file
+                  </span>
+                </div>
+              ) : (
+                /* Kalau belum dipilih, munculkan instruksi */
+                <div className="flex flex-col items-center gap-2 text-gray-500 transition group-hover:text-cyan-400">
+                  <Box size={24} />
+                  <span className="text-sm font-medium">
+                    Klik untuk upload file
+                  </span>
+                  <span className="text-[10px] text-gray-600 max-w-[200px] text-center">
+                    Support: ZIP, PDF, 3D, JPG, PNG, dll.
+                  </span>
+                </div>
+              )}
+
               <input
                 name="file"
                 type="file"
-                accept=".zip,.rar,.pdf"
+                accept=".zip,.rar,.7z,.pdf,.epub,.blend,.fbx,.obj,.glb,.gltf,.unitypackage,.psd,.ai,.fig,.png,.jpg,.jpeg,.webp"
                 required
                 className="hidden"
+                onChange={handleFileChange}
               />
             </label>
           </div>

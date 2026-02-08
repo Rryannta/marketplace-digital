@@ -3,16 +3,16 @@ import BackButton from "@/components/BackButton";
 import Image from "next/image";
 import { Share2, ShieldCheck, Download, Star } from "lucide-react";
 import { notFound } from "next/navigation";
-import DownloadButton from "@/components/DownloadButton"; // <--- Komponen Pintar Kita
+import DownloadButton from "@/components/DownloadButton";
+import Link from "next/link"; // <--- 1. Import Link
 
 interface ProductPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function ProductDetailPage({ params }: ProductPageProps) {
-  // Await params (Wajib di Next.js 15)
   const { id } = await params;
   const supabase = await createClient();
 
@@ -32,27 +32,22 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   let isPurchased = false;
 
   if (user) {
-    // Cek di tabel transaksi
     const { data: transaction } = await supabase
       .from("transactions")
       .select("id")
-      .eq("user_id", user.id) // <--- GANTI JADI INI
+      .eq("user_id", user.id)
       .eq("product_id", product.id)
       .eq("status", "success")
       .single();
 
-    // Kalau transaksi ditemukan, atau produk milik sendiri -> dianggap purchased
     if (transaction || product.user_id === user.id) {
       isPurchased = true;
     }
   }
 
-  // (Kita hapus formatRupiah di sini karena sudah ditangani di dalam ProductAction)
-
   return (
     <div className="min-h-screen bg-[#05050a] pb-20 pt-10 text-white">
       <div className="mx-auto max-w-6xl px-6">
-        {/* Tombol Kembali */}
         <BackButton />
 
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
@@ -106,29 +101,36 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
               {product.title}
             </h1>
 
+            {/* === 2. MODIFIKASI BAGIAN PROFILE === */}
+            {/* Bungkus seluruh div ini dengan Link ke halaman seller */}
             <div className="mb-8 flex items-center gap-3 border-b border-white/10 pb-8">
-              <div className="h-10 w-10 overflow-hidden rounded-full border border-white/10">
-                <Image
-                  src={
-                    product.profiles?.avatar_url ||
-                    `https://ui-avatars.com/api/?name=User`
-                  }
-                  alt="Seller"
-                  width={40}
-                  height={40}
-                />
-              </div>
-              <div>
-                <p className="text-sm text-gray-400">Created by</p>
-                <p className="font-bold text-white">
-                  {product.profiles?.full_name || "Unknown Creator"}
-                </p>
-              </div>
+              <Link
+                href={`/seller/${product.user_id}`}
+                className="group flex items-center gap-3 transition-opacity hover:opacity-80"
+              >
+                <div className="h-10 w-10 overflow-hidden rounded-full border border-white/10 bg-gray-700 relative group-hover:border-cyan-400 transition-colors">
+                  <Image
+                    src={
+                      product.profiles?.avatar_url ||
+                      `https://ui-avatars.com/api/?name=${
+                        product.profiles?.full_name || "User"
+                      }`
+                    }
+                    alt="Seller"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-400">Created by</p>
+                  <p className="font-bold text-white group-hover:text-cyan-400 transition-colors">
+                    {product.profiles?.full_name || "Unknown Creator"}
+                  </p>
+                </div>
+              </Link>
             </div>
+            {/* =================================== */}
 
-            {/* === PERBAIKAN UTAMA DI SINI === */}
-            {/* Kita panggil komponen pintar, dan kirim datanya lewat props */}
-            {/* 1. Tampilkan Harga Dulu (Karena tombol DownloadButton cuma berisi tombol) */}
             <div className="mb-6">
               <span className="text-3xl font-bold text-cyan-400">
                 {product.price === 0
@@ -141,15 +143,13 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
               </span>
             </div>
 
-            {/* 2. Panggil Tombol Download Canggih Kita */}
             <div className="mb-8">
               <DownloadButton
                 productId={product.id}
                 price={product.price}
-                isPurchased={isPurchased} // <--- Pass props ini
+                isPurchased={isPurchased}
               />
             </div>
-            {/* =============================== */}
 
             <div className="space-y-4">
               <h3 className="text-xl font-bold text-white">Deskripsi Produk</h3>

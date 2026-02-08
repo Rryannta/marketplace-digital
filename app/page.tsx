@@ -93,10 +93,10 @@ export default async function Homepage({ searchParams }: HomepageProps) {
             </div>
             {/* Sembunyikan teks MarketplaceKita di HP biar gak makan tempat, opsional */}
             <span className="hidden sm:inline">
-              Marketplace<span className="text-cyan-400">Kita</span>
+              Lapak<span className="text-cyan-400">Digital</span>
             </span>
             <span className="sm:hidden">
-              MP<span className="text-cyan-400">Kita</span>
+              Lapak<span className="text-cyan-400">Digital</span>
             </span>
           </Link>
 
@@ -245,7 +245,7 @@ export default async function Homepage({ searchParams }: HomepageProps) {
                 {/* Tombol Aksi (CTA) */}
                 <div className="flex flex-col gap-3 w-full md:w-auto">
                   <Link
-                    href="/dashboard/products/new"
+                    href="/dashboard/upload"
                     className="flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-cyan-600 px-6 py-3 text-sm font-bold text-white hover:bg-cyan-500 transition shadow-lg shadow-cyan-500/20"
                   >
                     Mulai Jualan
@@ -272,15 +272,17 @@ export default async function Homepage({ searchParams }: HomepageProps) {
                 </>
               ) : queryFilter === "sale" ? (
                 <>
-                  <Tag size={24} className="text-red-400" /> Diskon / Promo
+                  <Tag className="text-red-400" /> Diskon / Promo
                 </>
-              ) : queryFilter === "trending" ? (
+              ) : queryFilter === "new" ? (
+                // JIKA KLIK TAB "TERBARU"
                 <>
-                  <Flame size={24} className="text-orange-500" /> Sedang Tren
+                  <Sparkles className="text-cyan-400" /> Baru Diupload
                 </>
               ) : (
+                // JIKA HOME KOSONG (DEFAULT) -> Ganti Label Jadi Lebih Menarik
                 <>
-                  <Sparkles size={24} className="text-cyan-400" /> Baru Diupload
+                  <Home className="text-white" /> Rekomendasi Untukmu
                 </>
               )}
             </h2>
