@@ -52,7 +52,11 @@ export default function LoginPage() {
     if (error) {
       alert("Gagal Daftar: " + error.message);
     } else {
-      alert("Sukses! Cek email kamu untuk konfirmasi.");
+      // Teks alert sudah diganti!
+      alert("Akun berhasil dibuat! Silakan pindah ke tab Sign In untuk masuk."); // Opsional: Kosongkan form setelah berhasil daftar
+      setEmail("");
+      setPassword("");
+      setFullName("");
     }
     setLoading(false);
   };
