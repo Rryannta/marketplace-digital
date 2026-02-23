@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import SignOutButton from "@/components/SignOutButton";
-import { NavItem } from "./NavItem"; // <--- Import Komponen Baru Kita
+import { NavItem } from "./NavItem";
+import Link from "next/link"; // Tambahan import Link
 import {
   LayoutDashboard,
   Package,
@@ -34,8 +35,8 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-[#05050a] text-white selection:bg-cyan-500/30">
-      {/* === SIDEBAR KIRI === */}
-      <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-white/10 bg-[#0a0a0f]/80 backdrop-blur-xl">
+      {/* === SIDEBAR KIRI (HANYA MUNCUL DI LAPTOP/DESKTOP) === */}
+      <aside className="hidden md:block fixed left-0 top-0 z-40 h-screen w-64 border-r border-white/10 bg-[#0a0a0f]/80 backdrop-blur-xl">
         <div className="flex h-full flex-col px-6 py-8">
           {/* Info User */}
           <div className="mb-8 flex items-center gap-3">
@@ -103,12 +104,70 @@ export default async function DashboardLayout({
         </div>
       </aside>
 
-      {/* === KONTEN KANAN === */}
-      <main className="ml-64 min-h-screen w-full p-8 bg-gradient-to-b from-[#0a0a0f] to-black">
+      {/* === KONTEN KANAN (FULL LAYAR DI HP, MARGIN KIRI DI DESKTOP) === */}
+      <main className="flex-1 md:ml-64 min-h-screen w-full p-4 pb-24 md:p-8 bg-gradient-to-b from-[#0a0a0f] to-black">
+        {/* === HEADER MOBILE (HANYA MUNCUL DI HP) === */}
+        <div className="md:hidden flex items-center justify-between mb-6 border-b border-white/10 pb-4">
+          <div className="flex items-center gap-3">
+            <img
+              src={
+                profile?.avatar_url ||
+                `https://ui-avatars.com/api/?name=${user?.email}`
+              }
+              alt="Avatar"
+              className="h-10 w-10 rounded-full border border-white/10"
+            />
+            <div>
+              <p className="text-sm font-bold text-white">
+                {profile?.full_name || "Pengguna"}
+              </p>
+              <p className="text-xs text-cyan-400">Member Area</p>
+            </div>
+          </div>
+          <Link
+            href="/"
+            className="p-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10 transition-colors"
+          >
+            <Home size={18} />
+          </Link>
+        </div>
+
         <div className="mx-auto max-w-5xl animate-in fade-in slide-in-from-bottom-4 duration-500">
           {children}
         </div>
       </main>
+
+      {/* === BOTTOM NAVIGATION (HANYA MUNCUL DI HP) === */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around bg-[#0a0a0f]/95 border-t border-white/10 backdrop-blur-xl px-2 py-3 pb-safe">
+        <Link
+          href="/dashboard"
+          className="flex flex-col items-center text-gray-400 hover:text-cyan-400 transition-colors"
+        >
+          <LayoutDashboard size={20} />
+          <span className="text-[10px] mt-1 font-medium">Ringkasan</span>
+        </Link>
+        <Link
+          href="/dashboard/products"
+          className="flex flex-col items-center text-gray-400 hover:text-cyan-400 transition-colors"
+        >
+          <Package size={20} />
+          <span className="text-[10px] mt-1 font-medium">Produk</span>
+        </Link>
+        <Link
+          href="/dashboard/upload"
+          className="flex flex-col items-center text-gray-400 hover:text-cyan-400 transition-colors"
+        >
+          <Upload size={20} />
+          <span className="text-[10px] mt-1 font-medium">Upload</span>
+        </Link>
+        <Link
+          href="/dashboard/settings"
+          className="flex flex-col items-center text-gray-400 hover:text-cyan-400 transition-colors"
+        >
+          <Settings size={20} />
+          <span className="text-[10px] mt-1 font-medium">Akun</span>
+        </Link>
+      </nav>
     </div>
   );
 }
